@@ -1,1 +1,1 @@
-Desenvolvimento de um banco de dados funcionais e atrativos para o Chateau du Pet, baseado em metodologia participativa e pesquisa de satisfação
+Desenvolvimento de um banco de dados funcionais e atrativos para o Chateau du Pet, baseado em metodologia participativa e pesquisa de satisfação.
