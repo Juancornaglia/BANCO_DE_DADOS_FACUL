@@ -1,169 +1,154 @@
-CREATE TABLE CLIENTE (
-    ID_CLIENTE NUMBER,
-    NOME_CLIENTE VARCHAR2(100),
-    CPF VARCHAR2(11) UNIQUE,
-    ENDERECO_CLIENTE VARCHAR2(150),
-    TELEFONE VARCHAR2(15),
-    CONSTRAINT pk_CLIENTE PRIMARY KEY (ID_CLIENTE)
+CREATE TABLE public.agendamentos (
+  id_agendamento bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_cliente uuid NOT NULL,
+  id_pet bigint NOT NULL,
+  id_loja integer NOT NULL,
+  id_servico integer NOT NULL,
+  data_hora_inicio timestamp with time zone NOT NULL,
+  data_hora_fim timestamp with time zone,
+  status character varying NOT NULL DEFAULT 'pendente'::character varying,
+  observacoes_cliente text,
+  data_criacao timestamp without time zone DEFAULT now(),
+  CONSTRAINT agendamentos_pkey PRIMARY KEY (id_agendamento),
+  CONSTRAINT agendamentos_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES public.perfis(id),
+  CONSTRAINT agendamentos_id_pet_fkey FOREIGN KEY (id_pet) REFERENCES public.pets(id_pet),
+  CONSTRAINT agendamentos_id_loja_fkey FOREIGN KEY (id_loja) REFERENCES public.lojas(id_loja),
+  CONSTRAINT agendamentos_id_servico_fkey FOREIGN KEY (id_servico) REFERENCES public.servicos(id_servico)
+);
+CREATE TABLE public.dias_bloqueados (
+  id_bloqueio integer NOT NULL DEFAULT nextval('dias_bloqueados_id_bloqueio_seq'::regclass),
+  id_loja integer,
+  data_bloqueada date NOT NULL,
+  motivo text,
+  CONSTRAINT dias_bloqueados_pkey PRIMARY KEY (id_bloqueio),
+  CONSTRAINT dias_bloqueados_id_loja_fkey FOREIGN KEY (id_loja) REFERENCES public.lojas(id_loja)
+);
+CREATE TABLE public.fidelidade_historico (
+  id_historico bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_cliente uuid NOT NULL,
+  pontos integer NOT NULL,
+  tipo character varying NOT NULL,
+  id_referencia_pedido bigint,
+  id_referencia_agendamento bigint,
+  data_criacao timestamp with time zone DEFAULT now(),
+  CONSTRAINT fidelidade_historico_pkey PRIMARY KEY (id_historico),
+  CONSTRAINT fidelidade_historico_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES public.perfis(id),
+  CONSTRAINT fidelidade_historico_id_referencia_pedido_fkey FOREIGN KEY (id_referencia_pedido) REFERENCES public.pedidos(id_pedido),
+  CONSTRAINT fidelidade_historico_id_referencia_agendamento_fkey FOREIGN KEY (id_referencia_agendamento) REFERENCES public.agendamentos(id_agendamento)
+);
+CREATE TABLE public.fidelidade_pontos (
+  id integer NOT NULL DEFAULT nextval('fidelidade_pontos_id_seq'::regclass),
+  id_cliente uuid UNIQUE,
+  saldo_pontos numeric DEFAULT 0,
+  data_atualizacao timestamp with time zone DEFAULT now(),
+  CONSTRAINT fidelidade_pontos_pkey PRIMARY KEY (id),
+  CONSTRAINT fidelidade_pontos_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES public.perfis(id)
+);
+CREATE TABLE public.fornecedor (
+  id_fornecedor integer NOT NULL DEFAULT nextval('fornecedor_id_fornecedor_seq'::regclass),
+  cnpj_fornecedor character varying NOT NULL UNIQUE,
+  nome_fornecedor character varying NOT NULL,
+  produto_fornecido character varying,
+  contato_fornecedor character varying,
+  CONSTRAINT fornecedor_pkey PRIMARY KEY (id_fornecedor)
+);
+CREATE TABLE public.funcionarios_detalhes (
+  id_perfil uuid NOT NULL,
+  funcao_detalhada character varying,
+  data_contratacao date NOT NULL,
+  salario numeric,
+  especialidade text,
+  crmv character varying,
+  CONSTRAINT funcionarios_detalhes_pkey PRIMARY KEY (id_perfil),
+  CONSTRAINT funcionarios_detalhes_id_perfil_fkey FOREIGN KEY (id_perfil) REFERENCES public.perfis(id)
+);
+CREATE TABLE public.lojas (
+  id_loja integer NOT NULL DEFAULT nextval('lojas_id_loja_seq'::regclass),
+  nome_loja character varying NOT NULL UNIQUE,
+  cnpj_loja character varying UNIQUE,
+  endereco text,
+  telefone character varying,
+  CONSTRAINT lojas_pkey PRIMARY KEY (id_loja)
+);
+CREATE TABLE public.pedidos (
+  id_pedido bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_cliente uuid NOT NULL,
+  status_pedido character varying NOT NULL DEFAULT 'processando'::character varying,
+  total_pedido numeric NOT NULL,
+  data_pedido timestamp with time zone DEFAULT now(),
+  CONSTRAINT pedidos_pkey PRIMARY KEY (id_pedido),
+  CONSTRAINT pedidos_id_cliente_fkey FOREIGN KEY (id_cliente) REFERENCES public.perfis(id)
+);
+CREATE TABLE public.pedidos_itens (
+  id_item_pedido bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_pedido bigint NOT NULL,
+  id_produto integer NOT NULL,
+  quantidade integer NOT NULL CHECK (quantidade > 0),
+  preco_unitario numeric NOT NULL,
+  CONSTRAINT pedidos_itens_pkey PRIMARY KEY (id_item_pedido),
+  CONSTRAINT pedidos_itens_id_pedido_fkey FOREIGN KEY (id_pedido) REFERENCES public.pedidos(id_pedido)
+);
+CREATE TABLE public.perfis (
+  id uuid NOT NULL,
+  nome_completo text,
+  email text UNIQUE,
+  cpf character varying UNIQUE,
+  endereco text,
+  telefone character varying,
+  role character varying NOT NULL DEFAULT 'cliente'::character varying,
+  CONSTRAINT perfis_pkey PRIMARY KEY (id),
+  CONSTRAINT perfis_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.pets (
+  id_pet bigint GENERATED ALWAYS AS IDENTITY NOT NULL,
+  id_tutor uuid NOT NULL,
+  nome_pet text NOT NULL,
+  especie character varying,
+  raca character varying,
+  porte character varying,
+  data_nascimento date,
+  observacoes text,
+  CONSTRAINT pets_pkey PRIMARY KEY (id_pet),
+  CONSTRAINT pets_id_tutor_fkey FOREIGN KEY (id_tutor) REFERENCES public.perfis(id)
+);
+CREATE TABLE public.produtos (
+  id_produto integer NOT NULL,
+  nome_produto character varying NOT NULL,
+  url_imagem text,
+  tipo_produto character varying,
+  subcategoria character varying,
+  marca character varying,
+  fabricante character varying,
+  descricao text,
+  cor character varying,
+  tamanho_medida character varying,
+  preco numeric NOT NULL DEFAULT 0.00,
+  preco_promocional numeric,
+  data_fabricacao date,
+  data_validade date,
+  quantidade_estoque integer NOT NULL DEFAULT 0 CHECK (quantidade_estoque >= 0),
+  status_produto character varying,
+  data_cadastro timestamp with time zone DEFAULT now(),
+  data_atualizacao timestamp with time zone,
+  observacoes text,
+  CONSTRAINT produtos_pkey PRIMARY KEY (id_produto)
+);
+CREATE TABLE public.servicos (
+  id_servico integer NOT NULL DEFAULT nextval('servicos_id_servico_seq'::regclass),
+  nome_servico character varying NOT NULL UNIQUE,
+  descricao text,
+  duracao_media_minutos integer,
+  preco_servico numeric NOT NULL,
+  CONSTRAINT servicos_pkey PRIMARY KEY (id_servico)
+);
+CREATE TABLE public.servicos_loja_regras (
+  id_regra integer NOT NULL DEFAULT nextval('servicos_loja_regras_id_regra_seq'::regclass),
+  id_loja integer NOT NULL,
+  id_servico integer NOT NULL,
+  capacidade_simultanea integer NOT NULL DEFAULT 1 CHECK (capacidade_simultanea > 0),
+  ativo boolean NOT NULL DEFAULT true,
+  CONSTRAINT servicos_loja_regras_pkey PRIMARY KEY (id_regra),
+  CONSTRAINT servicos_loja_regras_id_loja_fkey FOREIGN KEY (id_loja) REFERENCES public.lojas(id_loja),
+  CONSTRAINT servicos_loja_regras_id_servico_fkey FOREIGN KEY (id_servico) REFERENCES public.servicos(id_servico)
 );
 
-CREATE TABLE PET_CLIENTE (
-    ID_PET_CLIENTE NUMBER,
-    ID_CLIENTE NUMBER,
-    NOME_PET VARCHAR2(100),
-    ESPECIE VARCHAR2(30),
-    RACA VARCHAR2(30),
-    CONSTRAINT pk_PET_CLIENTE PRIMARY KEY (ID_PET_CLIENTE),
-    CONSTRAINT fk_CLIENTE_PET FOREIGN KEY (ID_CLIENTE) REFERENCES CLIENTE (ID_CLIENTE)
-);
-
-CREATE TABLE AGENDAMENTO (
-    ID_AGENDAMENTO NUMBER,
-    ID_SERVICO NUMBER,
-    ID_PET_CLIENTE NUMBER,
-    ID_CLIENTE NUMBER,
-    DATA_AGENDAMENTO DATE,
-    HORARIO VARCHAR2(10),
-    VISITACAO_DAYCARE VARCHAR2(3),
-    STATUS VARCHAR2(20),
-    CONSTRAINT pk_AGENDAMENTO PRIMARY KEY (ID_AGENDAMENTO),
-    CONSTRAINT fk_PET_CLIENTE_AGENDAMENTO FOREIGN KEY (ID_PET_CLIENTE) REFERENCES PET_CLIENTE (ID_PET_CLIENTE),
-    CONSTRAINT fk_CLIENTE_AGENDAMENTO FOREIGN KEY (ID_CLIENTE) REFERENCES CLIENTE (ID_CLIENTE)
-);
-
-CREATE TABLE LOJA (
-    LOJA_ID NUMBER,
-    CNPJ VARCHAR2(14) UNIQUE,
-    NOME VARCHAR2(100),
-    ENDERECO VARCHAR2(150),
-    CONSTRAINT pk_LOJA PRIMARY KEY (LOJA_ID)
-);
-
-CREATE TABLE FUNCIONARIO (
-    ID_FUNCIONARIO NUMBER,
-    LOJA_ID NUMBER,
-    NOME VARCHAR2(100),
-    DEPARTAMENTO VARCHAR2(50),
-    CARGO VARCHAR2(50),
-    SALARIO NUMBER(10, 2),
-    CONSTRAINT pk_FUNCIONARIO PRIMARY KEY (ID_FUNCIONARIO),
-    CONSTRAINT fk_LOJA_FUNCIONARIO FOREIGN KEY (LOJA_ID) REFERENCES LOJA (LOJA_ID)
-);
-
-CREATE TABLE SERVICO (
-    ID_SERVICO NUMBER,
-    ID_FUNCIONARIO NUMBER,
-    ID_AGENDAMENTO NUMBER,
-    LOJA_ID NUMBER,
-    NOME_SERVICO VARCHAR2(70),
-    TIPO_SERVICO VARCHAR2(40),
-    PRECO NUMBER(10, 2),
-    CONSTRAINT pk_SERVICO PRIMARY KEY (ID_SERVICO),
-    CONSTRAINT fk_FUNCIONARIO_SERVICO FOREIGN KEY (ID_FUNCIONARIO) REFERENCES FUNCIONARIO (ID_FUNCIONARIO),
-    CONSTRAINT fk_LOJA_SERVICO FOREIGN KEY (LOJA_ID) REFERENCES LOJA (LOJA_ID)
-);
-
-CREATE TABLE TIPO_PRODUTO (
-    ID_TIPO_PRODUTO NUMBER,
-    NOME VARCHAR2(100),
-    MATERIA_PRIMA VARCHAR2(100),
-    DESCRICAO VARCHAR2(255),
-    PRECO NUMBER(10, 2),
-    CONSTRAINT pk_TIPO_PRODUTO PRIMARY KEY (ID_TIPO_PRODUTO)
-);
-
-CREATE TABLE FORNECEDOR (
-    ID_FORNECEDOR NUMBER,
-    CNPJ VARCHAR2(14) UNIQUE,
-    NOME VARCHAR2(100),
-    PRODUTO_FORNECIDO VARCHAR2(100),
-    CONTATO VARCHAR2(50),
-    CONSTRAINT pk_FORNECEDOR PRIMARY KEY (ID_FORNECEDOR)
-);
-
-CREATE TABLE PRODUTO (
-    ID_PRODUTO NUMBER,
-    ID_TIPO_PRODUTO NUMBER,
-    ID_FORNECEDOR NUMBER,
-    COD_PRODUTO VARCHAR2(50),
-    NOME VARCHAR2(100),
-    MARCA VARCHAR2(60),
-    VALIDADE DATE,
-    PRECO_LOJA NUMBER(10, 2),
-    PRECO_CLIENTE NUMBER(10, 2),
-    QUANTIDADE NUMBER,
-    DATA_ATUALIZACAO DATE,
-    DESCRICAO VARCHAR2(255),
-    CONSTRAINT pk_PRODUTO PRIMARY KEY (ID_PRODUTO),
-    CONSTRAINT fk_TIPO_PRODUTO FOREIGN KEY (ID_TIPO_PRODUTO) REFERENCES TIPO_PRODUTO (ID_TIPO_PRODUTO),
-    CONSTRAINT fk_FORNECEDOR_PRODUTO FOREIGN KEY (ID_FORNECEDOR) REFERENCES FORNECEDOR (ID_FORNECEDOR)
-);
-
-CREATE TABLE LOCAL (
-    ID_LOCAL NUMBER,
-    ID_FUNCIONARIO NUMBER,
-    ID_PRODUTO NUMBER,
-    LOJA_ID NUMBER,
-    DESCRICAO VARCHAR2(255),
-    CONSTRAINT pk_LOCAL PRIMARY KEY (ID_LOCAL),
-    CONSTRAINT fk_FUNCIONARIO_LOCAL FOREIGN KEY (ID_FUNCIONARIO) REFERENCES FUNCIONARIO (ID_FUNCIONARIO),
-    CONSTRAINT fk_PRODUTO_LOCAL FOREIGN KEY (ID_PRODUTO) REFERENCES PRODUTO (ID_PRODUTO),
-    CONSTRAINT fk_LOJA_LOCAL FOREIGN KEY (LOJA_ID) REFERENCES LOJA (LOJA_ID)
-);
-
-INSERT INTO CLIENTE (ID_CLIENTE, NOME_CLIENTE, CPF, ENDERECO_CLIENTE, TELEFONE) 
-VALUES (1, 'Marcos Almeida', '12345678901', 'Rua das Flores, 123', '11987654321');
-
-INSERT INTO PET_CLIENTE (ID_PET_CLIENTE, ID_CLIENTE, NOME_PET, ESPECIE, RACA) 
-VALUES (1, 1, 'Rex', 'Cachorro', 'Labrador');
-
-INSERT INTO LOJA (LOJA_ID, CNPJ, NOME, ENDERECO) 
-VALUES (1, '12345678000195', 'Pet Shop Mooca', 'Rua da Mooca, 123');
-
-INSERT INTO LOJA (LOJA_ID, CNPJ, NOME, ENDERECO) 
-VALUES (2, '12345678000196', 'Pet Shop Santos', 'Avenida da Praia, 456');
-
-INSERT INTO LOJA (LOJA_ID, CNPJ, NOME, ENDERECO) 
-VALUES (3, '12345678000197', 'Pet Shop Tatuapé', 'Rua do Tatuapé, 789');
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (1, 1, 'Carlos Silva', 'Administração', 'Gerente', 5000.00);
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (2, 1, 'Ana Oliveira', 'Dia Care', 'Líder de Day Care', 3000.00);
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (3, 1, 'Mariana Sousa', 'Dia Care', 'Recreador Day Care', 2000.00);
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (4, 1, 'João Pereira', 'Banho e Tosa', 'Banhista', 1500.00);
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (5, 1, 'Luciana Costa', 'Banho e Tosa', 'Supervisora Banho e Tosa', 2500.00);
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (6, 1, 'Patrícia Mendes', 'Veterinária', 'Veterinária', 6000.00);
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (7, 1, 'Felipe Ramos', 'Recepção', 'Recepcionista', 1800.00);
-
-INSERT INTO FUNCIONARIO (ID_FUNCIONARIO, LOJA_ID, NOME, DEPARTAMENTO, CARGO, SALARIO) 
-VALUES (8, 1, 'Sofia Lima', 'Geral', 'Ajudante Geral', 1200.00);
-
-INSERT INTO TIPO_PRODUTO (ID_TIPO_PRODUTO, NOME, MATERIA_PRIMA, DESCRICAO, PRECO) 
-VALUES (1, 'Ração', 'Milho, Carne', 'Ração para animais de estimação', 80.00);
-
-INSERT INTO FORNECEDOR (ID_FORNECEDOR, CNPJ, NOME, PRODUTO_FORNECIDO, CONTATO) 
-VALUES (1, '12345678000198', 'Fornecedor A', 'Ração', 'Contato A');
-
-INSERT INTO PRODUTO (ID_PRODUTO, ID_TIPO_PRODUTO, ID_FORNECEDOR, COD_PRODUTO, NOME, MARCA, VALIDADE, PRECO_LOJA, PRECO_CLIENTE, QUANTIDADE, DATA_ATUALIZACAO, DESCRICAO) 
-VALUES (1, 1, 1, 'PROD001', 'Ração Premium', 'Marca X', TO_DATE('2025-12-31', 'YYYY-MM-DD'), 100.00, 120.00, 50, SYSDATE, 'Ração para cães de alta qualidade');
-
-INSERT INTO LOCAL (ID_LOCAL, ID_FUNCIONARIO, ID_PRODUTO, LOJA_ID, DESCRICAO) 
-VALUES (1, 1, 1, 1, 'Localização do produto na loja');
-
-INSERT INTO AGENDAMENTO (ID_AGENDAMENTO, ID_SERVICO, ID_PET_CLIENTE, ID_CLIENTE, DATA_AGENDAMENTO, HORARIO, VISITACAO_DAYCARE, STATUS) 
-VALUES (1, 1, 1, 1, TO_DATE('2024-11-10', 'YYYY-MM-DD'), '10:00', 'SIM', 'CONFIRMADO');
-
-INSERT INTO SERVICO (ID_SERVICO, ID_FUNCIONARIO, ID_AGENDAMENTO, LOJA_ID, NOME_SERVICO, TIPO_SERVICO, PRECO) 
-VALUES (1, 4, 1, 1, 'Banho', 'Banho e Tosa', 50.00);
